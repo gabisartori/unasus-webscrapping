@@ -3,16 +3,30 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select, WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
+from datetime import datetime
+
+url = ""
+login = ""
+senha = ""
+grupo_inicio = 1
+grupo_fim = 259
+data_inicio = ""
+data_fim = ""
+download_path = ""
 
 with open('config.txt') as f:
-    url = f.readline().strip().split()[-1]
-    login = f.readline().strip().split()[-1]
-    password = f.readline().strip().split()[-1]
-    numero_grupos = int(f.readline().strip().split()[-1].strip())
-    try:
-        download_path = f.readline().strip().split()[-1]
-    except IndexError:
-        download_path = '.'
+    for line in f.readlines():
+        if line.strip().startswith("#") or line.strip() == "": continue
+        key, *value = line.split(": ")
+        value = "".join(value).strip()
+        exec(f'{key}="{value}"')
+
+password = senha
+group_start = int(grupo_inicio)
+group_end = int(grupo_fim)
+date_start = datetime.strptime(data_inicio, "%d/%m/%Y") if data_inicio else ""
+date_end = datetime.strptime(data_fim, "%d/%m/%Y") if data_fim else ""
+
 
 options = webdriver.FirefoxOptions()
 options.set_preference("browser.download.folderList", 2)
@@ -43,10 +57,17 @@ def select_group(driver: webdriver.Firefox, group: str):
     time.sleep(1)
     select.select_by_visible_text(group)
 
-def get_meetings_actions():
-    for element in driver.find_elements(By.CLASS_NAME, 'icon-options-dots'):
-        if element.is_displayed():
-            yield element
+def get_meetings():
+    for element in driver.find_elements(By.TAG_NAME, 'tr'):
+        yield element
+
+def download_meeting_csv(meeting):
+    date = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, 'col-5')))
+    date = datetime.strptime(date.text.split("\n")[0], "%d/%m/%Y")
+    if date_start and date < date_start: return
+    if date_end and date > date_end: return
+    print(date)
+        
 
 def open_meeting_report(driver: webdriver.Firefox, meeting_dots):
     driver.execute_script("arguments[0].scrollIntoView();", meeting_dots)
@@ -67,22 +88,22 @@ if __name__ == '__main__':
     open_history(driver)
 
     # Go through each group
-    for i in range(1, numero_grupos+1):
+    for i in range(group_start, group_end+1):
         select_group(driver, f"Grupo {i:0>3}")
         # Go through each meeting of the group
         WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, 'icon-options-dots')))
-        for meeting_dots in get_meetings_actions():
-            open_meeting_report(driver, meeting_dots)
-            
-            WebDriverWait(driver, 10).until(EC.number_of_windows_to_be(3))
-            driver.switch_to.window(driver.window_handles[2])
-            
-            # Replace this sleep with the wait for another component
-            # Because the download button renders before the page is fully loaded
-            time.sleep(1)
-            download_button = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, "//button[text()='Download Session Data']")))
-            download_button.click()
+        for meeting in get_meetings():
+            download_meeting_csv(meeting)
 
-            driver.close()
-            driver.switch_to.window(driver.window_handles[1])
-            time.sleep(1)
+            # WebDriverWait(driver, 10).until(EC.number_of_windows_to_be(3))
+            # driver.switch_to.window(driver.window_handles[2])
+            #
+            # # Replace this sleep with the wait for another component
+            # # Because the download button renders before the page is fully loaded
+            # time.sleep(1)
+            # download_button = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, "//button[text()='Download Session Data']")))
+            # download_button.click()
+            #
+            # driver.close()
+            # driver.switch_to.window(driver.window_handles[1])
+            # time.sleep(1)
