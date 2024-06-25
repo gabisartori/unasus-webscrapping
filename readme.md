@@ -89,14 +89,27 @@ Informações configuráveis:
 - Número de grupos
 - Pasta para donwload (opcional)
 
-#### O arquivo segue o seguinte formato:
+#### O arquivo segue o formato do seguinte exemplo:
 ```
 url: http://site.com
-login: seu_id_ufsc
-password: sua_senha
-numero de grupos: numero_de grupos
-pasta para download: /caminho/para/a/pasta/destino/
+login: id_ufsc@ufsc.br
+senha: sua_senha
+grupo_inicio: 1
+grupo_fim: 100
+data_inicio: 01/01/2024
+data_fim: 31/06/2024
+download_path: /home/user/Downloads/arquivos/
 ```
-É importante respeitar a ordem dos itens
+
+Cada linha controla uma funcionalidade do script, sendo algumas delas opcionais.
+A ordem que os valores são passados não importa, mas os nomes antes dos 2 pontos devem ser seguidos à risca.
+
+Descrição das configurações:
+- url: link que redireciona para a página lti, com a opção de "ver histórico"
+- login: Sua identificação no sistema de autenticação da UFSC
+- senha: Sua senha
+- grupo_inicio e grupo_fim: Número do primeiro e último grupo que se deseja baixar os relatórios das reuniões. O programa irá baixar todos os grupos entre eles. Por exemplo, se grupo_inicio for 1 e grupo_fim for 5, o programa irá baixar os relatórios dos grupos 1, 2, 3, 4 e 5. (O valor grupo_inicio é opicional, caso não seja informado, o programa começará pelo grupo 001)
+- data_inicio e data_fim: Datas para filtro das reuniões, o programa só irá baixar reuniões que ocorreram entre a data de início e a de fim. Caso uma delas não seja informada, o filtro será apenas ignorado.
+- download_path: Pasta onde os csv serão salvos. Caso não seja informada, os arquivos serão salvos no diretório padrão de downloads usado pelo firefox
 
 [Voltar para requisitos](#requisitos)
