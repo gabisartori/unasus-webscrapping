@@ -58,18 +58,26 @@ def select_group(driver: webdriver.Firefox, group: str):
     select.select_by_visible_text(group)
 
 def get_meetings():
-    for element in driver.find_elements(By.TAG_NAME, 'tr'):
+    for element in driver.find_element(By.TAG_NAME, 'tbody').find_elements(By.TAG_NAME, 'tr'):
         yield element
 
 def download_meeting_csv(meeting):
-    date = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, 'col-5')))
-    date = datetime.strptime(date.text.split("\n")[0], "%d/%m/%Y")
-    if date_start and date < date_start: return
-    if date_end and date > date_end: return
-    print(date)
-        
+    WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, 'col-5')))
 
-def open_meeting_report(driver: webdriver.Firefox, meeting_dots):
+    date = meeting.find_element(By.CLASS_NAME, 'col-5')
+    date = datetime.strptime(date.text.split("\n")[0], "%d/%m/%Y")
+
+    print(date, date_start, date < date_start)
+    if date_start and date < date_start:
+        print("Reunião antiga, ignorando")
+        return
+    if date_end and date > date_end: return
+
+    meeting_options = meeting.find_element(By.CLASS_NAME, 'icon-options-dots')
+    open_and_download_meeting_report(driver, meeting_options)
+
+def open_and_download_meeting_report(driver: webdriver.Firefox, meeting_dots):
+    # Click the dots to show options and then click the report link
     driver.execute_script("arguments[0].scrollIntoView();", meeting_dots)
     meeting_dots.click()
 
@@ -79,31 +87,33 @@ def open_meeting_report(driver: webdriver.Firefox, meeting_dots):
     # doesn't work
     # ¯\_(ツ)_/¯
     all_buttons = driver.find_elements(By.XPATH, '//button')
-    report_link = [x for x in all_buttons if x.text == "Relatório de engajamento"][0]
+    report_link = [x for x in all_buttons if x.text == "Relatório de engajamento"]
+    if not report_link:
+        print("Relatório não encontrado")
+        return
+    report_link = report_link[0]
     report_link.click()
+
+    # Wait for report page to load
+    WebDriverWait(driver, 10).until(EC.number_of_windows_to_be(3))
+    driver.switch_to.window(driver.window_handles[2])
+
+    # Wait for download button to load
+    time.sleep(1)
+    download_button = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, "//button[text()='Download Session Data']")))
+    download_button.click()
+
+    # Close report tab and go back to the history tab
+    driver.close()
+    driver.switch_to.window(driver.window_handles[1])
 
 if __name__ == '__main__':
     driver = webdriver.Firefox(options=options)
     visit_and_login(driver, url, login, password)
     open_history(driver)
 
-    # Go through each group
     for i in range(group_start, group_end+1):
         select_group(driver, f"Grupo {i:0>3}")
-        # Go through each meeting of the group
         WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, 'icon-options-dots')))
         for meeting in get_meetings():
             download_meeting_csv(meeting)
-
-            # WebDriverWait(driver, 10).until(EC.number_of_windows_to_be(3))
-            # driver.switch_to.window(driver.window_handles[2])
-            #
-            # # Replace this sleep with the wait for another component
-            # # Because the download button renders before the page is fully loaded
-            # time.sleep(1)
-            # download_button = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, "//button[text()='Download Session Data']")))
-            # download_button.click()
-            #
-            # driver.close()
-            # driver.switch_to.window(driver.window_handles[1])
-            # time.sleep(1)
